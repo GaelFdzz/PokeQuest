@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPokemonDetail, getPokemonDescription } from "../api/pokeapi";
+import { getPokemonDetail, getPokemonDescription } from "../api/api.js";
 import { palette, colorForType } from "../theme/colors";
 import TypeBadge from "../components/TypeBadge";
 import { useFavorites } from "../context/FavoritesContext";

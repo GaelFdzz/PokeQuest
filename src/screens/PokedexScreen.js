@@ -8,7 +8,7 @@ import {
   Text,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPokemonList, getPokemonByType } from "../api/pokeapi";
+import { getPokemonList, getPokemonByType } from "../api/api.js";
 import { palette } from "../theme/colors";
 import PokemonCard from "../components/PokemonCard";
 import { useFavorites } from "../context/FavoritesContext";
