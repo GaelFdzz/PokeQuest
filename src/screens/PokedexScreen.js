@@ -48,7 +48,7 @@ export default function PokedexScreen({ route, navigation }) {
 
     const request = typeFilter
       ? getPokemonByType(typeFilter)
-      : getPokemonList(151);
+      : getPokemonList(750, 0);
 
     Promise.resolve(request)
       .then((result) => {

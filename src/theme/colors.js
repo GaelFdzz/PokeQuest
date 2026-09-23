@@ -1,6 +1,6 @@
 
 export const palette = {
-  background: "#F6F4EE",
+  background: "#ffffff",
   surface: "#FFFFFF",
   surfaceLight: "#ECEAE3",
   primary: "#D74736",

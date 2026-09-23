@@ -18,7 +18,7 @@ async function safeFetch(url) {
   return res.json();
 }
 
-export async function getPokemonList(limit = 151, offset = 0) {
+export async function getPokemonList(limit = 0, offset = 0) {
   const data = await safeFetch(
     `${BASE_URL}/pokemon?limit=${limit}&offset=${offset}`
   );
