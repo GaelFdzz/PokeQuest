@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getTypes } from "../api/pokeapi";
+import { getTypes } from "../api/api";
 import { palette, colorForType } from "../theme/colors";
 import Pokeball from "../components/Pokeball";
 
