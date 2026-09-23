@@ -29,7 +29,7 @@ export default function App() {
   return (
     <FavoritesProvider>
       <NavigationContainer theme={navTheme}>
-        <StatusBar style="light" />
+        <StatusBar style="light" animated />
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{

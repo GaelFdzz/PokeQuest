@@ -33,7 +33,7 @@ export async function getTypes() {
   const data = await safeFetch(`${BASE_URL}/type`);
   return data.results
     .map((t) => t.name)
-    .filter((t) => t !== "unknown" && t !== "shadow");
+    .filter((t) => t !== "unknown" && t !== "shadow" && t !== "stellar");
 }
 
 export async function getPokemonByType(type) {

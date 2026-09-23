@@ -9,7 +9,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getPokemonDetail, getPokemonDescription } from "../api/api.js";
+import {
+  getPokemonDetail,
+  getPokemonDescription,
+} from "../api/api.js";
 import { palette, colorForType } from "../theme/colors";
 import TypeBadge from "../components/TypeBadge";
 import { useFavorites } from "../context/FavoritesContext";
@@ -23,167 +26,498 @@ const STAT_LABELS = {
   speed: "Velocidad",
 };
 
-export default function DetailScreen({ route }) {
+export default function DetailScreen({ route, navigation }) {
   const { id } = route.params;
+
   const [pokemon, setPokemon] = useState(null);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   const { isFavorite, toggleFavorite } = useFavorites();
 
   useEffect(() => {
-    Promise.all([getPokemonDetail(id), getPokemonDescription(id)])
-      .then(([detail, desc]) => {
-        setPokemon(detail);
-        setDescription(desc);
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+    navigation.setOptions({
+      title: "",
+      headerStyle: {
+        backgroundColor: palette.background,
+      },
+      headerShadowVisible: false,
+      headerTintColor: palette.text,
+    });
+  }, [navigation]);
 
-  if (loading || !pokemon) {
+  useEffect(() => {
+    let active = true;
+
+    setLoading(true);
+    setError(false);
+    setPokemon(null);
+
+    Promise.all([
+      getPokemonDetail(id),
+      getPokemonDescription(id),
+    ])
+      .then(([detail, desc]) => {
+        if (active) {
+          setPokemon(detail);
+          setDescription(desc);
+        }
+      })
+      .catch(() => {
+        if (active) setError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, reloadKey]);
+
+  if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={palette.primary} size="large" />
+        <ActivityIndicator
+          color={palette.primary}
+          size="large"
+        />
       </View>
     );
   }
 
-  const mainColor = colorForType(pokemon.types[0]);
+  if (error || !pokemon) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>
+          No encontramos esta ficha.
+        </Text>
+
+        <TouchableOpacity
+          onPress={() =>
+            setReloadKey((value) => value + 1)
+          }
+          style={styles.retry}
+          accessibilityRole="button"
+        >
+          <Text style={styles.retryText}>
+            Reintentar  ↗
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const mainColor = colorForType(pokemon.types?.[0]);
   const fav = isFavorite(pokemon.id);
+  const number = `#${String(pokemon.id).padStart(3, "0")}`;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={[styles.hero, { backgroundColor: mainColor }]}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.heading}>
+        <View>
+          <Text style={styles.eyebrow}>
+            POKEQUEST  /  FICHA DE CAMPO
+          </Text>
+
+          <Text style={styles.number}>
+            REGISTRO {number}
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={styles.favButton}
           onPress={() => toggleFavorite(pokemon.id)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            fav
+              ? `Quitar ${pokemon.name} de favoritos`
+              : `Agregar ${pokemon.name} a favoritos`
+          }
         >
           <Ionicons
             name={fav ? "heart" : "heart-outline"}
-            size={26}
-            color="#fff"
+            size={23}
+            color={
+              fav ? palette.primary : palette.text
+            }
           />
         </TouchableOpacity>
-        <Text style={styles.id}>#{String(pokemon.id).padStart(3, "0")}</Text>
-        <Text style={styles.name}>{pokemon.name}</Text>
-        <Image source={{ uri: pokemon.image }} style={styles.image} resizeMode="contain" />
       </View>
 
-      <View style={styles.body}>
-        <View style={styles.row}>
-          {pokemon.types.map((t) => (
-            <TypeBadge key={t} type={t} />
-          ))}
+      <Text style={styles.name}>
+        {pokemon.name}
+        <Text style={{ color: mainColor }}>.</Text>
+      </Text>
+
+      <View style={styles.types}>
+        {(pokemon.types || []).map((type) => (
+          <TypeBadge key={type} type={type} />
+        ))}
+      </View>
+
+      <View
+        style={[
+          styles.imageStage,
+          { backgroundColor: `${mainColor}19` },
+        ]}
+      >
+        <Text
+          style={[
+            styles.stageNumber,
+            { color: `${mainColor}27` },
+          ]}
+        >
+          {number}
+        </Text>
+
+        <Image
+          source={{ uri: pokemon.image }}
+          style={styles.image}
+          resizeMode="contain"
+        />
+
+        <View
+          style={[
+            styles.stageAccent,
+            { backgroundColor: mainColor },
+          ]}
+        />
+      </View>
+
+      {!!description && (
+        <Text style={styles.description}>
+          {description}
+        </Text>
+      )}
+
+      <View style={styles.rule} />
+
+      <Text style={styles.sectionKicker}>
+        PERFIL
+      </Text>
+      <Text style={styles.sectionTitle}>
+        Lo esencial
+      </Text>
+
+      <View style={styles.measureRow}>
+        <View style={styles.measure}>
+          <Text style={styles.measureLabel}>
+            ALTURA
+          </Text>
+          <Text style={styles.measureValue}>
+            {pokemon.height}{" "}
+            <Text style={styles.measureUnit}>m</Text>
+          </Text>
         </View>
 
-        {!!description && <Text style={styles.description}>{description}</Text>}
-
-        <View style={styles.measureRow}>
-          <View style={styles.measureBox}>
-            <Text style={styles.measureLabel}>Altura</Text>
-            <Text style={styles.measureValue}>{pokemon.height} m</Text>
-          </View>
-          <View style={styles.measureBox}>
-            <Text style={styles.measureLabel}>Peso</Text>
-            <Text style={styles.measureValue}>{pokemon.weight} kg</Text>
-          </View>
+        <View
+          style={[
+            styles.measure,
+            styles.measureDivider,
+          ]}
+        >
+          <Text style={styles.measureLabel}>
+            PESO
+          </Text>
+          <Text style={styles.measureValue}>
+            {pokemon.weight}{" "}
+            <Text style={styles.measureUnit}>kg</Text>
+          </Text>
         </View>
+      </View>
 
-        <Text style={styles.sectionTitle}>Habilidades</Text>
-        <View style={styles.row}>
-          {pokemon.abilities.map((a) => (
-            <View key={a} style={styles.abilityChip}>
-              <Text style={styles.abilityText}>{a.replace(/-/g, " ")}</Text>
-            </View>
-          ))}
-        </View>
+      <Text style={styles.smallHeading}>
+        HABILIDADES
+      </Text>
 
-        <Text style={styles.sectionTitle}>Estadísticas</Text>
-        {pokemon.stats.map((s) => (
-          <View key={s.name} style={styles.statRow}>
-            <Text style={styles.statLabel}>{STAT_LABELS[s.name] || s.name}</Text>
-            <View style={styles.statBarBg}>
-              <View
-                style={[
-                  styles.statBarFill,
-                  {
-                    width: `${Math.min(s.value, 150) / 1.5}%`,
-                    backgroundColor: mainColor,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={styles.statValue}>{s.value}</Text>
+      <View style={styles.abilities}>
+        {(pokemon.abilities || []).map((ability) => (
+          <View
+            key={ability}
+            style={styles.abilityChip}
+          >
+            <Text style={styles.abilityText}>
+              {ability.replace(/-/g, " ")}
+            </Text>
           </View>
         ))}
       </View>
+
+      <View style={styles.rule} />
+
+      <Text style={styles.sectionKicker}>
+        DATOS
+      </Text>
+      <Text style={styles.sectionTitle}>
+        Estadísticas
+      </Text>
+
+      {(pokemon.stats || []).map((stat) => (
+        <View key={stat.name} style={styles.statRow}>
+          <Text
+            style={styles.statLabel}
+            numberOfLines={1}
+          >
+            {STAT_LABELS[stat.name] || stat.name}
+          </Text>
+
+          <View style={styles.statBarBg}>
+            <View
+              style={[
+                styles.statBarFill,
+                {
+                  width: `${Math.max(
+                    0,
+                    Math.min(
+                      Number(stat.value) || 0,
+                      150
+                    )
+                  ) / 1.5
+                    }%`,
+                  backgroundColor: mainColor,
+                },
+              ]}
+            />
+          </View>
+
+          <Text style={styles.statValue}>
+            {stat.value}
+          </Text>
+        </View>
+      ))}
+
+      <Text style={styles.footer}>
+        POKEQUEST   ·   REGISTRO {number}
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: palette.background },
+  container: {
+    flex: 1,
+    backgroundColor: palette.background,
+  },
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 14,
+    paddingBottom: 42,
+  },
   center: {
     flex: 1,
     backgroundColor: palette.background,
     alignItems: "center",
     justifyContent: "center",
+    padding: 24,
   },
-  hero: { alignItems: "center", paddingTop: 24, paddingBottom: 10 },
-  favButton: { position: "absolute", top: 16, right: 16, padding: 6 },
-  id: { color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: "600" },
-  name: {
-    color: "#fff",
-    fontSize: 28,
+  errorTitle: {
+    color: palette.text,
+    fontSize: 19,
     fontWeight: "800",
-    textTransform: "capitalize",
-    marginBottom: 4,
   },
-  image: { width: 200, height: 200 },
-  body: { padding: 20 },
-  row: { flexDirection: "row", flexWrap: "wrap", marginBottom: 8 },
-  description: {
-    color: palette.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
+  retry: {
+    marginTop: 16,
+    padding: 12,
   },
-  measureRow: { flexDirection: "row", marginBottom: 16 },
-  measureBox: {
-    flex: 1,
-    backgroundColor: palette.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginRight: 10,
+  retryText: {
+    color: palette.primary,
+    fontWeight: "800",
+  },
+  heading: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  measureLabel: { color: palette.textMuted, fontSize: 12 },
-  measureValue: { color: palette.text, fontSize: 16, fontWeight: "700", marginTop: 4 },
+  eyebrow: {
+    color: palette.primary,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    fontWeight: "800",
+  },
+  number: {
+    color: palette.textMuted,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    fontWeight: "700",
+    marginTop: 10,
+  },
+  favButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  name: {
+    color: palette.text,
+    fontSize: 45,
+    fontWeight: "800",
+    textTransform: "capitalize",
+    letterSpacing: -2.5,
+    marginTop: 15,
+  },
+  types: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 9,
+    marginBottom: 15,
+  },
+  imageStage: {
+    height: 268,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  stageNumber: {
+    position: "absolute",
+    top: 2,
+    right: 13,
+    fontSize: 101,
+    fontWeight: "900",
+    letterSpacing: -9,
+  },
+  image: {
+    width: "80%",
+    height: 242,
+  },
+  stageAccent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    height: 5,
+    width: 72,
+  },
+  description: {
+    color: palette.text,
+    fontSize: 15,
+    lineHeight: 24,
+    marginTop: 25,
+  },
+  rule: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginTop: 31,
+    marginBottom: 24,
+  },
+  sectionKicker: {
+    color: palette.primary,
+    fontSize: 10,
+    letterSpacing: 1.7,
+    fontWeight: "800",
+  },
   sectionTitle: {
     color: palette.text,
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: 8,
+    fontSize: 25,
+    fontWeight: "800",
+    letterSpacing: -0.8,
+    marginTop: 7,
+    marginBottom: 18,
+  },
+  measureRow: {
+    flexDirection: "row",
+    backgroundColor: palette.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingVertical: 18,
+    marginBottom: 25,
+  },
+  measure: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  measureDivider: {
+    borderLeftWidth: 1,
+    borderLeftColor: palette.border,
+  },
+  measureLabel: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
+  },
+  measureValue: {
+    color: palette.text,
+    fontSize: 24,
+    fontWeight: "800",
+    marginTop: 5,
+  },
+  measureUnit: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  smallHeading: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.3,
     marginBottom: 10,
+  },
+  abilities: {
+    flexDirection: "row",
+    flexWrap: "wrap",
   },
   abilityChip: {
     backgroundColor: palette.surfaceLight,
-    borderRadius: 20,
+    borderRadius: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     marginRight: 8,
     marginBottom: 8,
   },
-  abilityText: { color: palette.text, fontSize: 13, textTransform: "capitalize" },
-  statRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  statLabel: { color: palette.textMuted, fontSize: 12, width: 70 },
+  abilityText: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "capitalize",
+  },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 17,
+  },
+  statLabel: {
+    color: palette.textMuted,
+    fontSize: 12,
+    width: 76,
+    fontWeight: "600",
+  },
   statBarBg: {
     flex: 1,
-    height: 8,
+    height: 6,
     backgroundColor: palette.surfaceLight,
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: "hidden",
-    marginHorizontal: 8,
+    marginHorizontal: 10,
   },
-  statBarFill: { height: "100%", borderRadius: 4 },
-  statValue: { color: palette.text, fontSize: 12, width: 30, textAlign: "right" },
+  statBarFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  statValue: {
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: "800",
+    width: 28,
+    textAlign: "right",
+  },
+  footer: {
+    color: palette.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textAlign: "center",
+    marginTop: 29,
+  },
 });
