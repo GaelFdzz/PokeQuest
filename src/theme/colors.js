@@ -9,6 +9,7 @@ export const palette = {
   border: "#3D3D52",
 };
 
+// Color representativo por tipo (usado en chips, barras de stats y fondos de detalle)
 export const typeColors = {
   normal: "#A8A878",
   fire: "#F08030",
